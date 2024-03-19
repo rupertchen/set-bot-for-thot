@@ -9,7 +9,6 @@ module.exports = {
 	client.channels.fetch(interaction.channelId)
 	    .then(channel => {
 		    // Fetch channel
-		    console.log(channel);
 		    channel.send(`DEBUG: found the channel, ${channel.name}`)
 		    	.then(message => console.log(`Sent message: ${message.content}`))
 		        .catch(console.error);
@@ -24,6 +23,7 @@ module.exports = {
 		    const oldMessages = channel.messages.fetch()
 		        .then(messages => messages.filter(isTooOld))
 		        .then(messages => {
+		            channel.send(`DEBUG: found message(s) to delete, ${messages.size}`);
 			    const report = messages.map(x => {
 				    return {id: x.id, ts: x.createdTimestamp};
 			    });
