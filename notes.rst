@@ -37,3 +37,9 @@ Hardcoded
 - Channel ID, #thot-ish: 1219259318835220542
 
 - Channel ID, #general: 1211196488785600523
+
+
+Misc
+====
+
+- Timestamps are in milliseconds (1/1,000 s)

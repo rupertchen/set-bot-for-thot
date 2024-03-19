@@ -14,14 +14,36 @@ module.exports = {
 		    	.then(message => console.log(`Sent message: ${message.content}`))
 		        .catch(console.error);
 
-		    // Fetch messages
+		    // Filter messages
+		    const horizon = Date.now() - (1 * 60 * 1000);
 		    const filter = m => {
-			    console.log(`filter message ${message.content}`);
-			    return true;
+			    console.log(`created at ${new Date(m.createdTimestamp)}, filter message ${m.content}`);
+			    return m.createdTimestamp < horizon;
 		    };
-		    return channel.awaitMessages({ filter, max: 5, time: 10_000, errors: ['time']})
-		        .then(collected => console.log(collected.size))
-		        .catch(collected => console.log(`After 10 s, only ${collected.size}`));
+
+		    // Extract IDs
+		    const msgIds = channel.messages.fetch()
+		        .then(messages => messages.filter(filter))
+		    	.then(messages => {
+			    console.log(`Received ${messages.size} messages`);
+			    channel.send(`DEBUG: fetched ${messages.size} messages`);
+			    
+			    messages.forEach((val, key, map) => {
+				    console.log(`m[${key}] = createdTimestamp:${val.createdTimestamp}, deletable:${val.deletable}`);
+			    });
+				console.log('message IDs', messages.keys());
+			    return messages.keys();
+			})
+		    	.catch(console.error);
+
+		    msgIds.then(ids => {
+			    console.log(ids);
+			    for (const id of ids) {
+				    console.log(`Delete message ${id}`);
+				    channel.messages.delete(id);
+			    }
+		    });
+
 	    })
 	    .catch(console.error);
 	await interaction.reply(`Searching for oldest message in ${interaction.channelId}`);
