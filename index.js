@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
 const { token } = require('./config.json');
+const cron = require('node-cron');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
@@ -52,3 +53,36 @@ client.once(Events.ClientReady, readyClient => {
 
 // Log in to Discord with your client's token
 client.login(token);
+
+const task = cron.schedule('* * * * *', () => {
+	console.log('Running scheduled prune');
+	pruneV0(client, '1219259318835220542');
+});
+
+function pruneV0(client, channelId) {
+	client.channels
+		.fetch(channelId)
+		.then(pruneChannelV0);
+}
+
+function pruneChannelV0(channel) {
+	channel.send(`DEBUG: prune channel ${channel.name}`)
+		.catch(console.error);
+
+	const horizon = Date.now() - (2 * 60 * 1000);
+	const isTooOld = message => message.createdTimestamp < horizon;
+
+	return channel.messages.fetch()
+		.then(messages => messages.filter(isTooOld))
+		.then(messages => {
+			channel.send(`DEBUG: found message(s) to delete, ${messages.size}`);
+			const report = messages.map(m => {
+				return {
+					id: m.id,
+					ts: m.createdTimestamp
+				};
+			});
+			console.log('Deleting messages', report);
+			channel.bulkDelete(messages);
+		});
+}
