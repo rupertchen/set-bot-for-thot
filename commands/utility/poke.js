@@ -41,26 +41,30 @@ function findLatestMessageAfter(channel, messageId) {
 function deleteOldMessages(channel) {
 	console.log('deletOldMessages');
 	deleteOldMessagesBefore(channel, null)
-		.then(id => {
-			if (id != null) {
-				deleteOldMessagesBefore(channel, id);
-			}
-		});
+		.catch(console.error);
 }
 
 function deleteOldMessagesBefore(channel, messageId) {
 	console.log(`deleteOldMessageBefore ${messageId}`);
-	return channel.messages.fetch({limit: 1, before: messageId})
+	// TODO: Increase 2 to 100?  Small number to test iteration
+	return channel.messages.fetch({limit: 2, cache: false, before: messageId})
 		.then(messages => {
+			console.log(`fetched ${messages.size} messages`);
 			if (messages.size == 0) {
 				return null;
 			}
 
 			const horizon = Date.now() - (1 * 60 * 1000);
 			const candidates = messages.filter(m => m.createdTimestamp < horizon);
-			channel.bulkDelete(candidates);
+			console.log(`filtered to ${candidates.size} messages`);
+			channel.bulkDelete(candidates)
+				.then(messages => console.log(`Bulk deleted ${messages.size} messages`))
+				.catch(console.error);
 
-			return messages.reduce(olderMessage).id;
+			const oldestId = messages.reduce(olderMessage).id;
+			if (oldestId != null) {
+				deleteOldMessagesBefore(channel, oldestId);
+			}
 		});
 }
 
