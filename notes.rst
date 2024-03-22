@@ -43,3 +43,15 @@ Misc
 ====
 
 - Timestamps are in milliseconds (1/1,000 s)
+
+
+Questions
+=========
+
+- How to pass a "before" arg throught Discord.js when fetching a message?
+
+  - Just pass as a property in an object to fetch()
+
+- Can the message ID in a "before" arg be used even if the message has been deleted?
+
+  - Yes! The IDs appear to be in order, and the message ID doesn't event seem to have to exist in the channel.

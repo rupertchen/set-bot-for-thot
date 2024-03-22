@@ -28,10 +28,33 @@ module.exports = {
 				    return {id: x.id, ts: x.createdTimestamp};
 			    });
 			    console.log('Deleting messages:', report);
-			    channel.bulkDelete(messages);
+			    //channel.bulkDelete(messages);
 		    })
+
+		    findLatestMessage(channel)
+		    	.then(msg => console.log("Latest message", {id: msg.id, ts: msg.createdTimestamp}));
 	    })
 	    .catch(console.error);
 	await interaction.reply(`Searching for oldest message in ${interaction.channelId}`);
     },
 };
+
+function findLatestMessage(channel) {
+	return findLatestMessageAfter(channel, null);
+}
+
+function findLatestMessageAfter(channel, messageId) {
+	return channel.messages.fetch({after: messageId})
+		.then(messages => messages.reduce((acc, curr) => {
+			return (acc == null || curr.createdTimestamp >= acc.createdTimestamp)
+				? curr
+				: acc;
+		}, null))
+		.then(m => {
+			if (m == null) {
+				return null;
+			}
+			return findLatestMessageAfter(channel, m.id)
+				.then(m2 => m2 == null ? m : findLatestMessageAfter(channel, m2.id));
+		});
+}

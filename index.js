@@ -55,8 +55,8 @@ client.once(Events.ClientReady, readyClient => {
 client.login(token);
 
 const task = cron.schedule('* * * * *', () => {
-	console.log('Running scheduled prune');
-	pruneV0(client, '1219259318835220542');
+	//console.log('Running scheduled prune');
+	//pruneV0(client, '1219259318835220542');
 });
 
 function pruneV0(client, channelId) {
