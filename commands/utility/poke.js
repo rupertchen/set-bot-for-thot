@@ -5,34 +5,13 @@ module.exports = {
         .setName('poke')
 	.setDescription('Replies with some debugging info'),
     async execute(interaction, client) {
-	console.log(`Searching for oldest message in ${interaction.channelId}`);
 	client.channels.fetch(interaction.channelId)
 	    .then(channel => {
 		    // Fetch channel
 		    channel.send(`DEBUG: found the channel, ${channel.name}`)
-		    	.then(message => console.log(`Sent message: ${message.content}`))
 		        .catch(console.error);
 
-		    // Filter messages
-		    const horizon = Date.now() - (1 * 60 * 1000);
-		    const isTooOld = m => {
-			    return m.createdTimestamp < horizon;
-		    };
-
-		    // Extract IDs
-		    const oldMessages = channel.messages.fetch()
-		        .then(messages => messages.filter(isTooOld))
-		        .then(messages => {
-		            channel.send(`DEBUG: found message(s) to delete, ${messages.size}`);
-			    const report = messages.map(x => {
-				    return {id: x.id, ts: x.createdTimestamp};
-			    });
-			    console.log('Deleting messages:', report);
-			    //channel.bulkDelete(messages);
-		    })
-
-		    findLatestMessage(channel)
-		    	.then(msg => console.log("Latest message", {id: msg.id, ts: msg.createdTimestamp}));
+		    deleteOldMessages(channel);
 	    })
 	    .catch(console.error);
 	await interaction.reply(`Searching for oldest message in ${interaction.channelId}`);
@@ -57,4 +36,47 @@ function findLatestMessageAfter(channel, messageId) {
 			return findLatestMessageAfter(channel, m.id)
 				.then(m2 => m2 == null ? m : findLatestMessageAfter(channel, m2.id));
 		});
+}
+
+function deleteOldMessages(channel) {
+	console.log('deletOldMessages');
+	deleteOldMessagesBefore(channel, null)
+		.then(id => {
+			if (id != null) {
+				deleteOldMessagesBefore(channel, id);
+			}
+		});
+}
+
+function deleteOldMessagesBefore(channel, messageId) {
+	console.log(`deleteOldMessageBefore ${messageId}`);
+	return channel.messages.fetch({limit: 1, before: messageId})
+		.then(messages => {
+			if (messages.size == 0) {
+				return null;
+			}
+
+			const horizon = Date.now() - (1 * 60 * 1000);
+			const candidates = messages.filter(m => m.createdTimestamp < horizon);
+			channel.bulkDelete(candidates);
+
+			return messages.reduce(olderMessage).id;
+		});
+}
+
+function olderMessage(m1, m2) {
+	const stamp1 = m1.createdTimestamp;
+	const stamp2 = m2.createdTimestamp;
+
+	if (stamp1 < stamp2) {
+		return m1;
+	}
+	if (stamp2 < stamp1) {
+		return m2;
+	}
+
+	const id1 = m1.id;
+	const id2 = m2.id;
+
+	return (m1.id < m2.id) ? m1 : m2;
 }
