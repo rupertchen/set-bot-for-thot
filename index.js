@@ -55,8 +55,16 @@ client.once(Events.ClientReady, readyClient => {
 client.login(token);
 
 const task = cron.schedule('* * * * *', () => {
-	//console.log('Running scheduled prune');
+	console.log('Running scheduled prune');
 	//pruneV0(client, '1219259318835220542');
+	deleteOldMessages('1219259318835220542');
+});
+
+const autoTyper = cron.schedule('* * * * * ', () => {
+	console.log(`Type something at ${Date.now()}`);
+	client.channels
+		.fetch('1219259318835220542')
+		.then(channel => channel.send(`The time is now ${Date.now()}`));
 });
 
 function pruneV0(client, channelId) {
@@ -85,4 +93,71 @@ function pruneChannelV0(channel) {
 			console.log('Deleting messages', report);
 			channel.bulkDelete(messages);
 		});
+}
+
+function deleteOldMessages(channelId) {
+        console.debug('deleteOldMessages');
+	client.channels
+		.fetch(channelId)
+		.then(channel => deleteOldMessagesBefore(channel, null))
+		.catch(console.error);
+}
+
+function deleteOldMessagesBefore(channel, messageId) {
+        console.debug(`deleteOldMessageBefore ${messageId}`);
+        // The Bulk Delete Messages API accepts a maximum of 100 messages to
+        // delete.
+        //
+        // See: https://discord.com/developers/docs/resources/channel#bulk-delete-messages
+        return channel.messages.fetch({limit: 100, cache: false, before: messageId})
+                .then(messages => {
+                        console.debug(`fetched ${messages.size} messages`);
+                        if (messages.size == 0) {
+                                return null;
+                        }
+
+			// TODO: change horizon to 24 hours
+                        const horizon = Date.now() - (3 * 60 * 1000);
+                        const candidates = messages.filter(m => m.createdTimestamp < horizon);
+                        console.debug(`filtered to ${candidates.size} messages`);
+                        channel.bulkDelete(candidates, true)
+                                .then(messages => console.debug(`Bulk deleted ${messages.size} messages`))
+                                .catch(console.error);
+
+                        const oldestMsg = messages.reduce(olderMessage);
+                        // If this message is too old to delete, then there is
+                        // no reason to continue fetching messages; they will
+                        // all be too old to delete.
+			if (isTooOldToDelete(oldestMsg)) {
+                                return null;
+                        }
+
+                        if (oldestMsg.id != null) {
+                                deleteOldMessagesBefore(channel, oldestMsg.id);
+                        }
+                });
+}
+
+function isTooOldToDelete(msg) {
+        // Discord won't allow automated deletion of messages older than two
+        // weeks.
+        const age = Date.now() - msg.createdTimestamp;
+        return age > (14 * 24 * 60 * 60 * 1000);
+}
+
+function olderMessage(m1, m2) {
+        const stamp1 = m1.createdTimestamp;
+        const stamp2 = m2.createdTimestamp;
+
+        if (stamp1 < stamp2) {
+                return m1;
+        }
+        if (stamp2 < stamp1) {
+                return m2;
+        }
+
+        const id1 = m1.id;
+        const id2 = m2.id;
+
+        return (m1.id < m2.id) ? m1 : m2;
 }
