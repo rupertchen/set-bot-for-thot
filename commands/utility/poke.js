@@ -1,71 +1,62 @@
 const { SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
-    data: new SlashCommandBuilder()
-        .setName('poke')
-	.setDescription('Replies with some debugging info'),
-    async execute(interaction, client) {
-	client.channels.fetch(interaction.channelId)
-	    .then(channel => {
-		    // Fetch channel
-		    channel.send(`DEBUG: found the channel, ${channel.name}`)
-		        .catch(console.error);
-
-		    deleteOldMessages(channel);
-	    })
-	    .catch(console.error);
-	await interaction.reply(`Searching for oldest message in ${interaction.channelId}`);
-    },
+	data: new SlashCommandBuilder()
+		.setName('poke')
+		.setDescription('Manually trigger deletion of old messages'),
+	async execute(interaction, client) {
+		client.channels.fetch(interaction.channelId)
+			.then(channel => deleteOldMessages(channel))
+			.catch(console.error);
+		await interaction.reply('Manually triggered deletion of old messages');
+	},
 };
 
-function findLatestMessage(channel) {
-	return findLatestMessageAfter(channel, null);
-}
-
-function findLatestMessageAfter(channel, messageId) {
-	return channel.messages.fetch({after: messageId})
-		.then(messages => messages.reduce((acc, curr) => {
-			return (acc == null || curr.createdTimestamp >= acc.createdTimestamp)
-				? curr
-				: acc;
-		}, null))
-		.then(m => {
-			if (m == null) {
-				return null;
-			}
-			return findLatestMessageAfter(channel, m.id)
-				.then(m2 => m2 == null ? m : findLatestMessageAfter(channel, m2.id));
-		});
-}
-
 function deleteOldMessages(channel) {
-	console.log('deletOldMessages');
+	console.debug('deletOldMessages');
 	deleteOldMessagesBefore(channel, null)
 		.catch(console.error);
 }
 
 function deleteOldMessagesBefore(channel, messageId) {
-	console.log(`deleteOldMessageBefore ${messageId}`);
-	// TODO: Increase 2 to 100?  Small number to test iteration
-	return channel.messages.fetch({limit: 2, cache: false, before: messageId})
+	console.debug(`deleteOldMessageBefore ${messageId}`);
+	// The Bulk Delete Messages API accepts a maximum of 100 messages to
+	// delete.
+	//
+	// See: https://discord.com/developers/docs/resources/channel#bulk-delete-messages
+	return channel.messages.fetch({limit: 100, cache: false, before: messageId})
 		.then(messages => {
-			console.log(`fetched ${messages.size} messages`);
+			console.debug(`fetched ${messages.size} messages`);
 			if (messages.size == 0) {
 				return null;
 			}
 
 			const horizon = Date.now() - (1 * 60 * 1000);
 			const candidates = messages.filter(m => m.createdTimestamp < horizon);
-			console.log(`filtered to ${candidates.size} messages`);
-			channel.bulkDelete(candidates)
-				.then(messages => console.log(`Bulk deleted ${messages.size} messages`))
+			console.debug(`filtered to ${candidates.size} messages`);
+			channel.bulkDelete(candidates, true)
+				.then(messages => console.debug(`Bulk deleted ${messages.size} messages`))
 				.catch(console.error);
 
-			const oldestId = messages.reduce(olderMessage).id;
-			if (oldestId != null) {
-				deleteOldMessagesBefore(channel, oldestId);
+			const oldestMsg = messages.reduce(olderMessage);
+			// If this message is too old to delete, then there's
+			// no reason to continue fetching messages; they will
+			// all be too old to delete.
+			if (isTooOldToDelete(oldestMsg)) {
+				return null;
+			}
+
+			if (oldestMsg.id != null) {
+				deleteOldMessagesBefore(channel, oldestMsg.id);
 			}
 		});
+}
+
+function isTooOldToDelete(msg) {
+	// Discord won't allow automated deletion of messages older than two
+	// weeks.
+	const age = Date.now() - msg.createdTimestamp;
+	return age > (14 * 24 * 60 * 60 * 1000);
 }
 
 function olderMessage(m1, m2) {
