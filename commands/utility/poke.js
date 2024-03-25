@@ -1,3 +1,5 @@
+// TODO: Is there any reason to keep this command here?
+
 const { SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
@@ -24,7 +26,7 @@ function deleteOldMessagesBefore(channel, messageId) {
 	// delete.
 	//
 	// See: https://discord.com/developers/docs/resources/channel#bulk-delete-messages
-	return channel.messages.fetch({limit: 100, cache: false, before: messageId})
+	return channel.messages.fetch({ limit: 100, cache: false, before: messageId })
 		.then(messages => {
 			console.debug(`fetched ${messages.size} messages`);
 			if (messages.size == 0) {
