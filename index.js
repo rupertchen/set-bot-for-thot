@@ -136,6 +136,7 @@ function isTooOldToDelete(msg) {
 	// Discord won't allow automated deletion of messages older than two
 	// weeks.
 	const age = Date.now() - msg.createdTimestamp;
+	// TODO: Is this available as a constant from Discord.js in v14?
 	return age > (14 * 24 * 60 * 60 * 1000);
 }
 
