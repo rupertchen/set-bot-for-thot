@@ -26,11 +26,24 @@ for (const folder of commandFolders) {
 }
 
 const botConfig = {
+	// SetSailForFail, #thot-ish
 	'1219259318835220542': {
 		'schedule': '* * * * *',
 		'maxAge': 3 * 60 * 1000,
-		'runOnClientReady': true
-	}
+		'runOnClientReady': true,
+	},
+	// café frites olé, #thoughty-shit
+	'1207547969608486932': {
+		'schedule': '0 * * * *',
+		'maxAge': 24 * 60 * 60 * 1000,
+		'runOnClientReady': true,
+	},
+	// café frites olé, #thotty-shit
+	'1207547936439934996': {
+		'schedule': '0 * * * *',
+		'maxAge': 24 * 60 * 60 * 1000,
+		'runOnClientReady': true,
+	},
 };
 
 client.on(Events.InteractionCreate, async interaction => {
