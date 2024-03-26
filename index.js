@@ -6,11 +6,11 @@ const cron = require('node-cron');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
+// TODO: All this command related stuff is unused.  It comes from the
+// Discord.js tutorial.  Perhaps remove it all?
 client.commands = new Collection();
-
 const foldersPath = path.join(__dirname, 'commands');
 const commandFolders = fs.readdirSync(foldersPath);
-
 for (const folder of commandFolders) {
 	const commandsPath = path.join(foldersPath, folder);
 	const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
@@ -24,6 +24,14 @@ for (const folder of commandFolders) {
 		}
 	}
 }
+
+const botConfig = {
+	'1219259318835220542': {
+		'schedule': '* * * * *',
+		'maxAge': 3 * 60 * 1000,
+		'runOnClientReady': true
+	}
+};
 
 client.on(Events.InteractionCreate, async interaction => {
 	if (!interaction.isChatInputCommand()) return;
@@ -48,34 +56,37 @@ client.on(Events.InteractionCreate, async interaction => {
 });
 
 client.once(Events.ClientReady, readyClient => {
-	console.log(`Ready! Logged in as ${readyClient.user.tag}`);
-	const task = cron.schedule('* * * * *', () => {
-		console.log('Running scheduled prune');
-		//pruneV0(client, '1219259318835220542');
-		deleteOldMessages('1219259318835220542');
-	});
+	console.log(`Logged in as ${readyClient.user.tag}`);
+
+	for (const channelId in botConfig) {
+		const channelConfig = botConfig[channelId];
+		console.log(`Schedule prune on ${channelId}`, channelConfig);
+
+		const fn = () => {
+			console.log(`Running scheduled prune on ${channelId}`);
+			deleteOldMessages(channelId, channelConfig.maxAge);
+		};
+
+		cron.schedule(channelConfig.schedule, fn);
+
+		if (channelConfig.runOnClientReady) {
+			fn.apply();
+		}
+	}
 });
 
-// Log in to Discord with your client's token
 client.login(token);
 
-const autoTyper = cron.schedule('* * * * * ', () => {
-	console.log(`Type something at ${Date.now()}`);
-	client.channels
-		.fetch('1219259318835220542')
-		.then(channel => channel.send(`The time is now ${Date.now()}`));
-});
-
-function deleteOldMessages(channelId) {
-	console.debug('deleteOldMessages');
+function deleteOldMessages(channelId, maxAge) {
+	console.debug('deleteOldMessages', { channelId, maxAge });
 	client.channels
 		.fetch(channelId)
-		.then(channel => deleteOldMessagesBefore(channel, null))
+		.then(channel => deleteOldMessagesBefore(channel, maxAge, null))
 		.catch(console.error);
 }
 
-function deleteOldMessagesBefore(channel, messageId) {
-	console.debug(`deleteOldMessageBefore ${messageId}`);
+function deleteOldMessagesBefore(channel, maxAge, messageId) {
+	console.debug('deleteOldMessageBefore', { maxAge, messageId });
 	// The Bulk Delete Messages API accepts a maximum of 100 messages to
 	// delete.
 	//
@@ -87,8 +98,7 @@ function deleteOldMessagesBefore(channel, messageId) {
 				return null;
 			}
 
-			// TODO: change horizon to 24 hours
-			const horizon = Date.now() - (3 * 60 * 1000);
+			const horizon = Date.now() - maxAge;
 			const candidates = messages.filter(m => m.createdTimestamp < horizon);
 			console.debug(`filtered to ${candidates.size} messages`);
 			channel.bulkDelete(candidates, true)
@@ -104,7 +114,7 @@ function deleteOldMessagesBefore(channel, messageId) {
 			}
 
 			if (oldestMsg.id != null) {
-				deleteOldMessagesBefore(channel, oldestMsg.id);
+				deleteOldMessagesBefore(channel, maxAge, oldestMsg.id);
 			}
 		});
 }
