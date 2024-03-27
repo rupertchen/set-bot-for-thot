@@ -115,7 +115,7 @@ function deleteOldMessagesBefore(channel, maxAge, messageId) {
 			const candidates = messages.filter(m => m.createdTimestamp < horizon);
 			console.debug(`filtered to ${candidates.size} messages`);
 			channel.bulkDelete(candidates, true)
-				.then(messages => console.debug(`Bulk deleted ${messages.size} messages`))
+				.then(deletedMsgs => console.debug(`Bulk deleted ${deletedMsgs.size} messages`))
 				.catch(console.error);
 
 			const oldestMsg = messages.reduce(olderMessage);
@@ -150,9 +150,6 @@ function olderMessage(m1, m2) {
 	if (stamp2 < stamp1) {
 		return m2;
 	}
-
-	const id1 = m1.id;
-	const id2 = m2.id;
 
 	return (m1.id < m2.id) ? m1 : m2;
 }
