@@ -35,13 +35,13 @@ const botConfig = {
 	// café frites olé, #thoughty-shit
 	'1207547969608486932': {
 		'schedule': '0 * * * *',
-		'maxAge': 24 * 60 * 60 * 1000,
+		'maxAge': 48 * 60 * 60 * 1000,
 		'runOnClientReady': true,
 	},
 	// café frites olé, #thotty-shit
 	'1207547936439934996': {
 		'schedule': '0 * * * *',
-		'maxAge': 24 * 60 * 60 * 1000,
+		'maxAge': 48 * 60 * 60 * 1000,
 		'runOnClientReady': true,
 	},
 };
