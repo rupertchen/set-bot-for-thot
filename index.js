@@ -1,11 +1,9 @@
-require('dotenv').config()
-console.log(process.env)
-
+// TODO: ES6 or CJS?
+require('dotenv').config();
 
 const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
-const { token } = require('./config.json');
 const cron = require('node-cron');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
@@ -92,7 +90,7 @@ client.once(Events.ClientReady, readyClient => {
 	}
 });
 
-client.login(token);
+client.login(process.env.TOKEN);
 
 function deleteOldMessages(channelId, maxAge) {
 	console.debug('deleteOldMessages', { channelId, maxAge });
