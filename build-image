@@ -1,0 +1,6 @@
+#!/bin/bash
+set -euf -o pipefail
+
+readonly commit="$(git show --format=%h --no-patch)"
+podman build -t sbft:latest .
+podman tag sbft:latest sbft:${commit}
